@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Learn C++ — a tiny game</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+
+  <style>
+
+    :root {
+      --bg: #e9f1ee;
+      --ink: #14213d;
+      --card: #fbfdfc;
+      --accent: #ffca3a;
+      --correct: #1f8a5b;
+      --wrong: #c8353f;
+      --code-bg: #14213d;
+      --code-text: #e8f0ec;
+      --grid: rgba(20, 33, 61, 0.07);
+
+      box-sizing: border-box;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0f1a2b;
+        --ink: #e8f0ec;
+        --card: #172540;
+        --code-bg: #0a1220;
+        --grid: rgba(232, 240, 236, 0.06);
+        --correct: #3dbb85;
+        --wrong: #ff6b73;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #0f1a2b;
+      --ink: #e8f0ec;
+      --card: #172540;
+      --code-bg: #0a1220;
+      --grid: rgba(232, 240, 236, 0.06);
+      --correct: #3dbb85;
+      --wrong: #ff6b73;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 28px 28px;
+      color: var(--ink);
+      font: 500 17px/1.55 "Bricolage Grotesque", system-ui, sans-serif;
+    }
+
+    .wrap {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      max-width: 46ch;
+      margin: 4px 0 20px;
+    }
+
+    #stats {
+      padding: 2px 10px;
+      background: var(--accent);
+      color: #14213d;
+      border: 2px solid var(--ink);
+      border-radius: 6px;
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 700;
+    }
+
+    #map {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .node {
+      width: 42px;
+      height: 42px;
+      background: var(--card);
+      color: var(--ink);
+      border: 2px solid var(--ink);
+      border-radius: 50%;
+      font: 700 1rem "JetBrains Mono", monospace;
+      cursor: pointer;
+    }
+    .node.done { background: var(--correct); color: #fff; }
+    .node.current {
+      background: var(--accent);
+      color: #14213d;
+      box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--ink);
+    }
+    .node:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .card {
+      padding: 22px;
+      background: var(--card);
+      border: 2px solid var(--ink);
+      border-radius: 10px;
+      box-shadow: 5px 5px 0 var(--ink);
+    }
+
+    h2 { margin: 0 0 10px; font-size: 1.4rem; line-height: 1.25; }
+    p  { margin: 0 0 14px; }
+
+    code {
+      padding: 1px 6px;
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 4px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.9em;
+    }
+
+    pre {
+      margin: 0 0 16px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 8px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .question-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+    }
+
+    #lives {
+      color: var(--wrong);
+      font-size: 1.1rem;
+      letter-spacing: 2px;
+    }
+
+    .choices {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .choice,
+    .button {
+      padding: 11px 14px;
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      font: 700 1rem "JetBrains Mono", monospace;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .choice { background: var(--card); color: var(--ink); }
+    .choice:hover { background: var(--accent); color: #14213d; }
+    .choice.correct { background: var(--correct); color: #fff; }
+    .choice.wrong   { background: var(--wrong);   color: #fff; }
+
+    .button {
+      background: var(--accent);
+      color: #14213d;
+      text-align: center;
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+    .button:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 var(--ink);
+    }
+
+    .fill-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      white-space: pre;
+    }
+
+    input {
+      min-width: 6ch;
+      margin: 0 4px;
+      padding: 2px 6px;
+      background: var(--code-text);
+      color: #14213d;
+      border: 2px solid var(--accent);
+      border-radius: 4px;
+      font: 700 0.9rem "JetBrains Mono", monospace;
+    }
+    input.correct { border-color: var(--correct); }
+    input.wrong   { border-color: var(--wrong); }
+
+    #feedback { margin-top: 16px; }
+    #feedback .good { color: var(--correct); font-weight: 800; }
+    #feedback .bad  { color: var(--wrong);   font-weight: 800; }
+
+    :focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+    footer { margin-top: 28px; text-align: center; }
+
+    footer button {
+      background: none;
+      border: 0;
+      color: var(--ink);
+      font: inherit;
+      text-decoration: underline;
+      opacity: 0.7;
+      cursor: pointer;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .card { animation: pop 0.25s ease-out; }
+      @keyframes pop { from { transform: translateY(6px); opacity: 0.5; } }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Learn C++</h1>
+      <div id="stats" aria-live="polite"></div>
+    </header>
+
+    <p class="subtitle">
+      Nine short levels. Read a little, answer two questions, unlock the next one.
+    </p>
+
+    <nav id="map" aria-label="Levels"></nav>
+    <main id="stage"></main>
+
+    <footer>
+      <button onclick="resetProgress()">Reset progress</button>
+    </footer>
+  </div>
+
+  <script>
+
+    const LEVELS = [
+      {
+        title: "Hello, world",
+        intro: "Every C++ program starts inside <code>main()</code>. <code>cout</code> prints to the screen and <code>&lt;&lt;</code> pushes things into it. Text goes in double quotes, and each statement ends with a semicolon.",
+        example: '#include <iostream>\nusing namespace std;\n\nint main() {\n  cout << "Hello!" << endl;\n  return 0;\n}',
+        questions: [
+          {
+            prompt: "What does this print?",
+            code: 'cout << "Hi" << endl;',
+            choices: ["Hi", '"Hi"', "cout", "Nothing"],
+            correct: 0,
+            explanation: "The quotes mark the text. They are not printed."
+          },
+          {
+            prompt: "Fill in the blank to print Hello.",
+            before: "cout << ",
+            after: " << endl;",
+            accepted: ['"Hello"'],
+            explanation: "Text must be wrapped in double quotes."
+          }
+        ]
+      },
+      {
+        title: "Variables",
+        intro: "A variable is a named box that holds a value. You pick its type first: <code>int</code> for whole numbers, <code>double</code> for decimals, <code>string</code> for text, <code>bool</code> for true or false.",
+        example: 'int age = 12;\ndouble price = 3.5;\nstring name = "Mia";\nbool happy = true;',
+        questions: [
+          {
+            prompt: "Which type should store 3.14?",
+            choices: ["int", "double", "bool", "string"],
+            correct: 1,
+            explanation: "double holds numbers with a decimal part."
+          },
+          {
+            prompt: "Fill in the type.",
+            before: "",
+            after: " age = 12;",
+            accepted: ["int"],
+            explanation: "Whole numbers use int."
+          }
+        ]
+      },
+      {
+        title: "Input",
+        intro: "<code>cin</code> reads what the user types. It points the other way from cout: <code>&gt;&gt;</code> moves data from the keyboard into your variable.",
+        example: 'int x;\ncout << "Pick a number: ";\ncin >> x;\ncout << "You picked " << x;',
+        questions: [
+          {
+            prompt: "Which line reads a number into x?",
+            choices: ["cin >> x;", "cout << x;", "cin << x;", "read(x);"],
+            correct: 0,
+            explanation: "cin goes with >> and sends input into the variable."
+          },
+          {
+            prompt: "Fill in the operator.",
+            before: "cin ",
+            after: " name;",
+            accepted: [">>"],
+            explanation: "cin pairs with >>."
+          }
+        ]
+      },
+      {
+        title: "Math",
+        intro: "Use <code>+ - * /</code> for math. <code>%</code> gives the remainder. Careful: dividing two ints throws away the decimal part.",
+        example: 'cout << 7 + 2;  // 9\ncout << 7 % 3;  // 1\ncout << 7 / 2;  // 3 (not 3.5!)',
+        questions: [
+          {
+            prompt: "What does this print?",
+            code: "cout << 7 % 3;",
+            choices: ["2", "1", "2.33", "0"],
+            correct: 1,
+            explanation: "7 divided by 3 is 2 with 1 left over."
+          },
+          {
+            prompt: "Both numbers are ints. What does this print?",
+            code: "cout << 7 / 2;",
+            choices: ["3.5", "4", "3", "2"],
+            correct: 2,
+            explanation: "Integer division drops the decimal part, so 7 / 2 is 3."
+          }
+        ]
+      },
+      {
+        title: "If and else",
+        intro: "<code>if</code> runs code only when a condition is true. Use <code>else</code> for the other case. Compare with <code>==</code> (equal), <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>. A single <code>=</code> assigns, it does not compare.",
+        example: 'if (score > 50) {\n  cout << "Pass";\n} else {\n  cout << "Try again";\n}',
+        questions: [
+          {
+            prompt: "What does this print?",
+            code: 'int x = 5;\nif (x > 3) cout << "big";\nelse cout << "small";',
+            choices: ["big", "small", "bigsmall", "Nothing"],
+            correct: 0,
+            explanation: "5 is greater than 3, so the if branch runs."
+          },
+          {
+            prompt: "Fill in the operator to check if x equals 10.",
+            before: "if (x ",
+            after: " 10)",
+            accepted: ["=="],
+            explanation: "== compares. A single = would assign."
+          }
+        ]
+      },
+      {
+        title: "For loops",
+        intro: "A <code>for</code> loop repeats code. It has three parts: where to start, when to keep going, and how to step.",
+        example: 'for (int i = 0; i < 3; i++) {\n  cout << i;\n}\n// prints 012',
+        questions: [
+          {
+            prompt: "What does this print?",
+            code: "for (int i = 0; i < 3; i++)\n  cout << i;",
+            choices: ["123", "012", "0123", "3"],
+            correct: 1,
+            explanation: "i is 0, 1, 2. It stops when i reaches 3."
+          },
+          {
+            prompt: "How many times does this loop run?",
+            code: "for (int i = 1; i <= 5; i++)",
+            choices: ["4", "5", "6", "1"],
+            correct: 1,
+            explanation: "i takes the values 1, 2, 3, 4, 5."
+          }
+        ]
+      },
+      {
+        title: "While loops",
+        intro: "A <code>while</code> loop repeats as long as its condition is true. Change something inside the loop, or it never stops.",
+        example: 'int n = 3;\nwhile (n > 0) {\n  cout << n;\n  n--;\n}\n// prints 321',
+        questions: [
+          {
+            prompt: "What does this print?",
+            code: "int n = 3;\nwhile (n > 0) {\n  cout << n;\n  n--;\n}",
+            choices: ["123", "321", "3", "210"],
+            correct: 1,
+            explanation: "n counts down 3, 2, 1, then stops at 0."
+          },
+          {
+            prompt: "Make the loop stop. Fill in the line.",
+            code: "while (n > 0) {\n  cout << n;",
+            before: "  ",
+            after: "\n}",
+            accepted: ["n--;", "--n;", "n=n-1;", "n-=1;"],
+            explanation: "Lowering n each time lets the condition become false."
+          }
+        ]
+      },
+      {
+        title: "Functions",
+        intro: "A function is a reusable piece of code. You give it a return type, a name, and inputs. <code>return</code> sends the answer back.",
+        example: 'int add(int a, int b) {\n  return a + b;\n}\n\ncout << add(2, 3);  // 5',
+        questions: [
+          {
+            prompt: "What does this print?",
+            code: "int add(int a, int b) {\n  return a + b;\n}\ncout << add(2, 3);",
+            choices: ["23", "5", "add", "6"],
+            correct: 1,
+            explanation: "add(2, 3) returns 2 + 3."
+          },
+          {
+            prompt: "Fill in the return type.",
+            before: "",
+            after: " square(int x) { return x * x; }",
+            accepted: ["int"],
+            explanation: "It returns a whole number, so the type is int."
+          }
+        ]
+      },
+      {
+        title: "Arrays",
+        intro: "An array stores many values of one type under one name. Counting starts at <code>0</code>, so the first item is <code>a[0]</code>.",
+        example: 'int a[3] = {10, 20, 30};\ncout << a[0];  // 10\ncout << a[2];  // 30',
+        questions: [
+          {
+            prompt: "What does this print?",
+            code: "int a[3] = {10, 20, 30};\ncout << a[1];",
+            choices: ["10", "20", "30", "1"],
+            correct: 1,
+            explanation: "Index 1 is the second item."
+          },
+          {
+            prompt: "What is the index of the first item?",
+            choices: ["0", "1", "-1", "first"],
+            correct: 0,
+            explanation: "C++ starts counting at 0."
+          }
+        ]
+      }
+    ];
+
+    let progress = { xp: 0, levelsDone: 0 };
+
+    let currentLevel = 0;
+    let currentQuestion = 0;
+    let lives = 3;
+    let answered = false;
+
+    const $ = (id) => document.getElementById(id);
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+    }
+
+    function showHearts() {
+      return "♥".repeat(lives) + "♡".repeat(3 - lives);
+    }
+
+    function saveProgress() {
+      try { localStorage.setItem("cpp", JSON.stringify(progress)); } catch (e) {}
+    }
+
+    function loadProgress() {
+      try {
+        const saved = JSON.parse(localStorage.getItem("cpp") || "null");
+        if (saved) {
+          progress = {
+            xp: saved.xp || 0,
+            levelsDone: saved.levelsDone ?? saved.done ?? 0
+          };
+        }
+      } catch (e) {}
+    }
+
+    function drawLevelMap() {
+      $("map").innerHTML = LEVELS.map((level, i) => {
+        const isDone = i < progress.levelsDone;
+        const isLocked = i > progress.levelsDone;
+        const isCurrent = i === currentLevel;
+
+        return `<button class="node ${isDone ? "done" : ""} ${isCurrent ? "current" : ""}"
+                  ${isLocked ? "disabled" : ""}
+                  onclick="showLesson(${i})"
+                  aria-label="Level ${i + 1}: ${level.title}">${isDone ? "✓" : i + 1}</button>`;
+      }).join("");
+
+      $("stats").textContent = progress.xp + " XP";
+    }
+
+    function showLesson(levelIndex) {
+      currentLevel = levelIndex;
+      currentQuestion = 0;
+      lives = 3;
+      drawLevelMap();
+
+      const level = LEVELS[levelIndex];
+      $("stage").innerHTML = `
+        <section class="card">
+          <h2>Level ${levelIndex + 1}: ${level.title}</h2>
+          <p>${level.intro}</p>
+          <pre>${escapeHtml(level.example)}</pre>
+          <button class="button" onclick="showQuestion()">Start challenge</button>
+        </section>`;
+    }
+
+    function showQuestion() {
+      const level = LEVELS[currentLevel];
+      const question = level.questions[currentQuestion];
+      const isMultipleChoice = Boolean(question.choices);
+      answered = false;
+
+      let html = `
+        <section class="card">
+          <div class="question-bar">
+            <span>Question ${currentQuestion + 1} of ${level.questions.length}</span>
+            <span id="lives" aria-label="${lives} lives left">${showHearts()}</span>
+          </div>
+          <h2>${question.prompt}</h2>`;
+
+      if (question.code) {
+        html += `<pre>${escapeHtml(question.code)}</pre>`;
+      }
+
+      if (isMultipleChoice) {
+        const buttons = question.choices
+          .map((text, i) => `<button class="choice" onclick="checkChoice(${i})">${escapeHtml(text)}</button>`)
+          .join("");
+        html += `<div class="choices">${buttons}</div>`;
+      } else {
+        html += `
+          <pre class="fill-line">${escapeHtml(question.before)}<input id="answer" autocomplete="off" autocapitalize="off" spellcheck="false" size="8" aria-label="Your answer">${escapeHtml(question.after)}</pre>
+          <button class="button" onclick="checkTypedAnswer()">Check</button>`;
+      }
+
+      html += `<div id="feedback" role="status"></div></section>`;
+      $("stage").innerHTML = html;
+
+      if ($("answer")) {
+        $("answer").onkeydown = (event) => {
+          if (event.key === "Enter") checkTypedAnswer();
+        };
+      }
+    }
+
+    function checkChoice(chosenIndex) {
+      if (answered) return;
+
+      const question = LEVELS[currentLevel].questions[currentQuestion];
+      const isCorrect = chosenIndex === question.correct;
+      const buttons = document.querySelectorAll(".choice");
+
+      buttons[chosenIndex].classList.add(isCorrect ? "correct" : "wrong");
+      if (!isCorrect) buttons[question.correct].classList.add("correct");
+
+      showResult(isCorrect);
+    }
+
+    function checkTypedAnswer() {
+      if (answered) return;
+
+      const question = LEVELS[currentLevel].questions[currentQuestion];
+      const typed = $("answer").value.replace(/\s+/g, "");
+
+      if (!typed) {
+        $("answer").focus();
+        return;
+      }
+
+      const isCorrect = question.accepted.some(
+        (answer) => answer.replace(/\s+/g, "") === typed
+      );
+
+      $("answer").classList.add(isCorrect ? "correct" : "wrong");
+      showResult(isCorrect);
+    }
+
+    function showResult(isCorrect) {
+      answered = true;
+
+      const level = LEVELS[currentLevel];
+      const question = level.questions[currentQuestion];
+      const isLastQuestion = currentQuestion === level.questions.length - 1;
+
+      if (isCorrect) progress.xp += 10;
+      else lives -= 1;
+
+      $("lives").textContent = showHearts();
+      $("stats").textContent = progress.xp + " XP";
+      saveProgress();
+
+      let message;
+      if (isCorrect) {
+        message = `<p class="good">Correct! +10 XP</p>`;
+      } else {
+        const answerHint = question.accepted
+          ? ` Answer: <code>${escapeHtml(question.accepted[0])}</code>`
+          : "";
+        message = `<p class="bad">Not quite.${answerHint}</p>`;
+      }
+
+      let nextButton;
+      if (!isCorrect && lives === 0) {
+        nextButton = `<button class="button" onclick="showLesson(${currentLevel})">Out of lives. Review and retry</button>`;
+      } else {
+        nextButton = `<button class="button" onclick="nextStep()">${isLastQuestion ? "Finish level" : "Next question"}</button>`;
+      }
+
+      $("feedback").innerHTML = `${message}<p>${question.explanation}</p>${nextButton}`;
+    }
+
+    function nextStep() {
+      currentQuestion += 1;
+
+      if (currentQuestion < LEVELS[currentLevel].questions.length) {
+        showQuestion();
+        return;
+      }
+
+      if (currentLevel >= progress.levelsDone) {
+        progress.levelsDone = currentLevel + 1;
+      }
+      saveProgress();
+      drawLevelMap();
+
+      const isLastLevel = currentLevel === LEVELS.length - 1;
+
+      if (isLastLevel) {
+        $("stage").innerHTML = `
+          <section class="card">
+            <h2>You finished all nine levels!</h2>
+            <p>You scored ${progress.xp} XP. You can already read and write basic C++: output, variables, input, math, decisions, loops, functions and arrays. Replay any level to practice. To run real code, try an online compiler such as Programiz or OnlineGDB.</p>
+          </section>`;
+      } else {
+        $("stage").innerHTML = `
+          <section class="card">
+            <h2>Level complete!</h2>
+            <p>Nice work on ${LEVELS[currentLevel].title.toLowerCase()}.</p>
+            <button class="button" onclick="showLesson(${currentLevel + 1})">Next level</button>
+          </section>`;
+      }
+    }
+
+    function resetProgress() {
+      if (confirm("Erase your XP and progress?")) {
+        progress = { xp: 0, levelsDone: 0 };
+        saveProgress();
+        showLesson(0);
+      }
+    }
+
+    loadProgress();
+    showLesson(Math.min(progress.levelsDone, LEVELS.length - 1));
+  </script>
+</body>
+</html>
